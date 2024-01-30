@@ -171,6 +171,10 @@ class FlutterCarplay {
     _carPlayController.methodChannel.invokeMethod('forceUpdateRootTemplate');
   }
 
+  void openMaps() {
+    _carPlayController.methodChannel.invokeMethod('openMap');
+  }
+
   /// Getter for current root template.
   /// Return one of type [CPTabBarTemplate], [CPGridTemplate], [CPListTemplate]
   static dynamic get rootTemplate {
