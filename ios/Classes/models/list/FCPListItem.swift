@@ -47,7 +47,7 @@ class FCPListItem {
       }
     }
     if image != nil {
-      listItem.setImage(UIImage().fromFlutterAsset(name: image!))
+      listItem.setImage(UIImage(systemName: image!) )
     }
     if playbackProgress != nil {
       listItem.playbackProgress = playbackProgress!

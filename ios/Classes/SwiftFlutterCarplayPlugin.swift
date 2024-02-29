@@ -16,7 +16,9 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
   private static var _rootTemplate: CPTemplate?
   public static var animated: Bool = false
   private var objcPresentTemplate: FCPPresentTemplate?
-  
+  private static var _chargingList: CPListTemplate?
+  private static var templateStack: [FCPRootTemplate] = []
+
   public static var rootTemplate: CPTemplate? {
     get {
       return _rootTemplate
@@ -25,8 +27,18 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
       _rootTemplate = tabBarTemplate
     }
   }
+    
+  public static var chargingList: CPListTemplate? {
+      get {
+        return _chargingList
+      }
+      set(listTemplate) {
+          _chargingList = listTemplate
+      }
+    }
   
   public static func register(with registrar: FlutterPluginRegistrar) {
+      
     let channel = FlutterMethodChannel(name: makeFCPChannelId(event: ""),
                                        binaryMessenger: registrar.messenger())
     let instance = SwiftFlutterCarplayPlugin()
@@ -39,7 +51,34 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
     case FCPChannelTypes.openMap:
-        return FlutterCarPlaySceneDelegate().openMap()
+        let args = call.arguments as? [String : Any]
+        let latitude = args?["latitude"] as? Double
+        let longitude = args?["longitude"] as? Double
+        let address = args?["address"] as? String
+        FlutterCarPlaySceneDelegate().openMap(latitude: latitude!, longitude: longitude!, address: address!)
+        result(true)
+        break
+    case FCPChannelTypes.updateFilterTab:
+        let args = call.arguments as? [String : Any]
+        let newTemplate = FCPListTemplate(obj: args?["updatedTemplate"] as! [String : Any], templateType: FCPListTemplateTypes.PART_OF_GRID_TEMPLATE)
+        FlutterCarPlaySceneDelegate.updateFilterTab(updatedTemplate: newTemplate)
+        SwiftFlutterCarplayPlugin.templateStack.append(newTemplate)
+        result(true)
+        break
+    case FCPChannelTypes.updatePoiTab:
+        let args = call.arguments as! [String : Any]
+        let newTemplate = FCPPointOfInterestTemplate(obj: args["updatedTemplate"] as! [String : Any])
+        FlutterCarPlaySceneDelegate.updatePoiList(updatedPoi: newTemplate.get)
+        SwiftFlutterCarplayPlugin.templateStack.append(newTemplate)
+        result(true)
+        break
+    case FCPChannelTypes.updateChargingTab:
+        let args = call.arguments as! [String : Any]
+        let newTemplate = FCPListTemplate(obj: args["updatedTemplate"] as! [String : Any], templateType: .DEFAULT)
+        FlutterCarPlaySceneDelegate.updateChargingTab(updatedTemplate: newTemplate.get)
+        SwiftFlutterCarplayPlugin.templateStack.append(newTemplate)
+        result(true)
+        break
     case FCPChannelTypes.setRootTemplate:
       guard let args = call.arguments as? [String : Any] else {
         result(false)
@@ -55,7 +94,61 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
                               details: nil))
           return
         }
-        SwiftFlutterCarplayPlugin.rootTemplate = (rootTemplate as! FCPTabBarTemplate).get
+          SwiftFlutterCarplayPlugin.templateStack = []
+          SwiftFlutterCarplayPlugin.rootTemplate = (rootTemplate as! FCPTabBarTemplate).get
+          
+          let args = call.arguments as! [String : Any]
+          let poisArgs = (args["pois"] as! [String : Any])
+          let favPoisArgs = (args["favPois"] as! [String : Any])
+          var pois: FCPPointOfInterestTemplate
+          var favPois: FCPPointOfInterestTemplate
+          
+          pois = FCPPointOfInterestTemplate(obj: poisArgs)
+          favPois = FCPPointOfInterestTemplate(obj: favPoisArgs)
+          
+          var favTemplate = favPois.get
+          let poiTemplate = pois.get
+          let hasFav = favPois.get.pointsOfInterest.count > 0
+          
+          let rootTemplate = SwiftFlutterCarplayPlugin.rootTemplate
+          let animated = SwiftFlutterCarplayPlugin.animated
+          
+          var rtTemplate = (rootTemplate as! CPTabBarTemplate).templates
+          
+          rtTemplate.remove(at: 0)
+          rtTemplate.insert(poiTemplate, at: 0)
+          if hasFav {rtTemplate.insert(favTemplate, at: 1)}
+          else {
+              let noFavTemplate = CPInformationTemplate(title: "Favori istasyonunuz bulunmamaktadir.", layout: .leading, items: [
+              CPInformationItem(title: "Favori istasyonlarınıza erişim sağlanamadı. Lütfen giriş yaptığınızdan emin olunuz.", detail: nil)
+              ], actions: [])
+              rtTemplate.insert(noFavTemplate, at: 1)
+          }
+          
+          var chargingTab = rtTemplate.last as! CPListTemplate
+          var chargingLoginTemplate = CPInformationTemplate(title: "Şarj işlemi bulunamadı.", layout: .leading, items: [
+            CPInformationItem(title: "Lütfen giriş yapmış olduğunuz hesabınızı kontrol ediniz veya destek ekibimizle iletişime geçiniz.", detail: nil)
+            ], actions: [])
+          
+          if chargingTab.sections.isEmpty {
+              rtTemplate.removeLast()
+              rtTemplate.append(chargingLoginTemplate)
+          }
+          
+          let tab = CPTabBarTemplate(templates: rtTemplate)
+          
+          var charging = tab.templates.last
+          charging?.tabImage = UIImage(systemName: "bolt.car")
+          charging?.tabTitle = "Şarj İşlemleri"
+          
+          tab.templates.first?.tabTitle = "İstasyonlar"
+          tab.templates.first?.tabImage = UIImage(systemName: "ev.charger.fill")
+          
+          let favTab = tab.templates[1]
+          favTab.tabTitle = "Favoriler"
+          favTab.tabImage = UIImage(systemName: "heart.fill")
+          
+          SwiftFlutterCarplayPlugin.rootTemplate = tab
         break
       case String(describing: FCPGridTemplate.self):
         rootTemplate = FCPGridTemplate(obj: args["rootTemplate"] as! [String : Any])
@@ -77,15 +170,17 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
         result(false)
         return
       }
+      
+      SwiftFlutterCarplayPlugin.templateStack.append(rootTemplate!)
       SwiftFlutterCarplayPlugin.objcRootTemplate = rootTemplate
       let animated = args["animated"] as! Bool
       SwiftFlutterCarplayPlugin.animated = animated
       result(true)
       break
     case FCPChannelTypes.forceUpdateRootTemplate:
-      FlutterCarPlaySceneDelegate.forceUpdateRootTemplate()
-      result(true)
-      break
+        FlutterCarPlaySceneDelegate.forceUpdateRootTemplate()
+        result(true)
+        break
     case FCPChannelTypes.updateListItem:
       guard let args = call.arguments as? [String : Any] else {
         result(false)
@@ -190,7 +285,10 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
         break
     
       case String(describing: FCPListTemplate.self):
-        pushTemplate = FCPListTemplate(obj: args["template"] as! [String : Any], templateType: FCPListTemplateTypes.DEFAULT).get
+          let fcpTemplate = FCPListTemplate(obj: args["template"] as! [String : Any], templateType: FCPListTemplateTypes.DEFAULT)
+          SwiftFlutterCarplayPlugin.chargingList = fcpTemplate.get
+          SwiftFlutterCarplayPlugin.templateStack.append(fcpTemplate)
+          pushTemplate = SwiftFlutterCarplayPlugin.chargingList
         break
       default:
         result(false)
@@ -225,25 +323,45 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
                                      data: ["status": status])
   }
   
-  static func findItem(elementId: String, actionWhenFound: (_ item: FCPListItem) -> Void) {
-    let objcRootTemplateType = String(describing: SwiftFlutterCarplayPlugin.objcRootTemplate).match(#"(.*flutter_carplay\.(.*)\))"#)[0][2]
-    var templates: [FCPListTemplate] = []
-    if (objcRootTemplateType.elementsEqual(String(describing: FCPListTemplate.self))) {
-      templates.append(SwiftFlutterCarplayPlugin.objcRootTemplate as! FCPListTemplate)
-    } else if (objcRootTemplateType.elementsEqual(String(describing: FCPTabBarTemplate.self))) {
-      templates = (SwiftFlutterCarplayPlugin.objcRootTemplate as! FCPTabBarTemplate).getTemplates()
-    } else {
-      return
-    }
-    l1: for t in templates {
-      for s in t.getSections() {
-        for i in s.getItems() {
-          if (i.elementId == elementId) {
-            actionWhenFound(i)
-            break l1
+    static func findItem(elementId: String, actionWhenFound: (_ item: FCPListItem) -> Void) {
+        let objcRootTemplateType = String(describing: SwiftFlutterCarplayPlugin.objcRootTemplate).match(#"(.*flutter_carplay\.(.*)\))"#)[0][2]
+        var templates: [FCPListTemplate] = []
+        if (objcRootTemplateType.elementsEqual(String(describing: FCPListTemplate.self))) {
+          templates.append(SwiftFlutterCarplayPlugin.objcRootTemplate as! FCPListTemplate)
+          NSLog("FCP: FCPListTemplate")
+        } else if (objcRootTemplateType.elementsEqual(String(describing: FCPTabBarTemplate.self))) {
+          templates = (SwiftFlutterCarplayPlugin.objcRootTemplate as! FCPTabBarTemplate).getTemplates()
+          NSLog("FCP: FCPTabBarTemplate")
+        } else {
+          NSLog("FCP: No Template")
+          return
+        }
+        for t in templateStack {
+          if (t is FCPTabBarTemplate) {
+            guard let tabBarTemplate = t as? FCPTabBarTemplate else {
+              break
+            }
+            for tbt in tabBarTemplate.getTemplates() {
+              templates.append(tbt)
+            }
+          }
+          if (t is FCPListTemplate) {
+            guard let template = t as? FCPListTemplate else {
+              break;
+            }
+            templates.append(template)
+          }
+        }
+
+        for t in templates {
+          for s in t.getSections() {
+            for i in s.getItems() {
+              if (i.elementId == elementId) {
+                actionWhenFound(i)
+                return
+              }
+            }
           }
         }
       }
-    }
-  }
 }

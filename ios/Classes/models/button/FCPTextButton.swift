@@ -38,6 +38,7 @@ class FCPTextButton {
     var get: CPTextButton {
         let textButton = CPTextButton.init(title: title, textStyle:self.style, handler: { _ in
             DispatchQueue.main.async {
+                debugPrint("fired")
                 FCPStreamHandlerPlugin.sendEvent(type: FCPChannelTypes.onTextButtonPressed, data: ["elementId": self.elementId])
             }
         })

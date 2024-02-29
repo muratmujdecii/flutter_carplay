@@ -30,6 +30,13 @@ class FCPTabBarTemplate {
     tabBarTemplate.tabTitle = title
     return tabBarTemplate
   }
+    
+    func setTemplate(index: Int, template: CPTemplate) -> [CPTemplate] {
+        var newTemplate = templates
+        newTemplate.remove(at: index)
+        newTemplate.insert(template, at: index)
+        return newTemplate
+    }
   
   public func getTemplates() -> [FCPListTemplate] {
     return objcTemplates

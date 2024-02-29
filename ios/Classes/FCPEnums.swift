@@ -30,6 +30,9 @@ enum FCPChannelTypes {
   static let onTextButtonPressed = "onTextButtonPressed"
   static let popToRootTemplate = "popToRootTemplate"
   static let openMap = "openMap"
+  static let updateFilterTab = "updateFilterTab"
+  static let updatePoiTab = "updatePoiTab"
+  static let updateChargingTab = "updateChargingTab"
 }
 
 enum FCPAlertActionTypes {

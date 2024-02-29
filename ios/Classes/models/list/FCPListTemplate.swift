@@ -29,7 +29,7 @@ class FCPListTemplate {
     self.emptyViewTitleVariants = obj["emptyViewTitleVariants"] as? [String] ?? []
     self.emptyViewSubtitleVariants = obj["emptyViewSubtitleVariants"] as? [String] ?? []
     self.showsTabBadge = obj["showsTabBadge"] as! Bool
-    self.templateType = templateType 
+    self.templateType = templateType
     self.objcSections = (obj["sections"] as! Array<[String : Any]>).map {
       FCPListSection(obj: $0)
     }
