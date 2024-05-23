@@ -76,7 +76,6 @@ class FlutterCarPlayController {
         template.runtimeType == CPPointOfInterestTemplate ||
         template.runtimeType == CPListTemplate) {
       templateHistory.add(template);
-      print(templateHistory.map((e) => e.toJson()).toString());
     } else {
       throw TypeError();
     }
