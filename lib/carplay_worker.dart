@@ -126,11 +126,13 @@ class FlutterCarplay {
   /// this flag when there isn’t an existing navigation hierarchy to replace.
   ///
   /// [!] CarPlay cannot have more than 5 templates on one screen.
-  static void setRootTemplate(
-      {required dynamic rootTemplate,
-      bool animated = true,
-      required CPPointOfInterestTemplate pois,
-      required CPPointOfInterestTemplate favPois}) {
+  static void setRootTemplate({
+    required dynamic rootTemplate,
+    bool animated = true,
+    required CPPointOfInterestTemplate pois,
+    required CPPointOfInterestTemplate favPois,
+    bool isLoggedIn = false,
+  }) {
     if (rootTemplate.runtimeType == CPTabBarTemplate ||
         rootTemplate.runtimeType == CPGridTemplate ||
         rootTemplate.runtimeType == CPListTemplate ||
@@ -142,9 +144,12 @@ class FlutterCarplay {
         'runtimeType': "F" + rootTemplate.runtimeType.toString(),
         'pois': pois.toJson(),
         'favPois': favPois.toJson(),
+        'isLoggedIn': isLoggedIn,
       }).then((value) {
         if (value) {
           FlutterCarPlayController.currentRootTemplate = rootTemplate;
+          _carPlayController.addTemplateToHistory(pois);
+          _carPlayController.addTemplateToHistory(favPois);
           _carPlayController.addTemplateToHistory(rootTemplate);
         }
       });

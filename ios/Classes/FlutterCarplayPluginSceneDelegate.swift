@@ -27,7 +27,6 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
         let index = templates.firstIndex(where: {$0.tabImage?.pngData() == image?.pngData()})
         let filterTab = templates[index!] as! CPListTemplate
         filterTab.updateSections(updatedTemplate.get.sections)
-        
     }
     
     static public func updatePoiList(updatedPoi: CPPointOfInterestTemplate) {

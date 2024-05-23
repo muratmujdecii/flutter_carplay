@@ -37,7 +37,7 @@ class FCPTabBarTemplate {
         newTemplate.insert(template, at: index)
         return newTemplate
     }
-  
+    
   public func getTemplates() -> [FCPListTemplate] {
     return objcTemplates
   }

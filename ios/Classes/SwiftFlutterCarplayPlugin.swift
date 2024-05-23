@@ -96,23 +96,21 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
         }
           SwiftFlutterCarplayPlugin.templateStack = []
           SwiftFlutterCarplayPlugin.rootTemplate = (rootTemplate as! FCPTabBarTemplate).get
-          
           let args = call.arguments as! [String : Any]
           let poisArgs = (args["pois"] as! [String : Any])
           let favPoisArgs = (args["favPois"] as! [String : Any])
+          let isLoggedIn = (args["isLoggedIn"] as! Bool)
+          
           var pois: FCPPointOfInterestTemplate
           var favPois: FCPPointOfInterestTemplate
-          
           pois = FCPPointOfInterestTemplate(obj: poisArgs)
           favPois = FCPPointOfInterestTemplate(obj: favPoisArgs)
-          
           var favTemplate = favPois.get
           let poiTemplate = pois.get
           let hasFav = favPois.get.pointsOfInterest.count > 0
           
           let rootTemplate = SwiftFlutterCarplayPlugin.rootTemplate
           let animated = SwiftFlutterCarplayPlugin.animated
-          
           var rtTemplate = (rootTemplate as! CPTabBarTemplate).templates
           
           rtTemplate.remove(at: 0)
@@ -126,13 +124,21 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
           }
           
           var chargingTab = rtTemplate.last as! CPListTemplate
-          var chargingLoginTemplate = CPInformationTemplate(title: "Şarj işlemi bulunamadı.", layout: .leading, items: [
-            CPInformationItem(title: "Lütfen giriş yapmış olduğunuz hesabınızı kontrol ediniz veya destek ekibimizle iletişime geçiniz.", detail: nil)
-            ], actions: [])
+          debugPrint(isLoggedIn)
           
-          if chargingTab.sections.isEmpty {
+              
+          var chargingLoginTemplate = CPInformationTemplate(title: "Giris Yap.", layout: .leading, items: [
+            CPInformationItem(title: "Sarj islemlerini gormek icin giris yap", detail: nil)
+            ], actions: []
+          )
+          if(!isLoggedIn){
               rtTemplate.removeLast()
               rtTemplate.append(chargingLoginTemplate)
+          }
+          
+          if chargingTab.sections.isEmpty {
+            rtTemplate.removeLast()
+            rtTemplate.append(chargingLoginTemplate)
           }
           
           let tab = CPTabBarTemplate(templates: rtTemplate)
@@ -140,14 +146,13 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
           var charging = tab.templates.last
           charging?.tabImage = UIImage(systemName: "bolt.car")
           charging?.tabTitle = "Şarj İşlemleri"
-          
           tab.templates.first?.tabTitle = "İstasyonlar"
           tab.templates.first?.tabImage = UIImage(systemName: "ev.charger.fill")
-          
           let favTab = tab.templates[1]
           favTab.tabTitle = "Favoriler"
           favTab.tabImage = UIImage(systemName: "heart.fill")
-          
+          SwiftFlutterCarplayPlugin.templateStack.append(pois)
+          SwiftFlutterCarplayPlugin.templateStack.append(favPois)
           SwiftFlutterCarplayPlugin.rootTemplate = tab
         break
       case String(describing: FCPGridTemplate.self):
