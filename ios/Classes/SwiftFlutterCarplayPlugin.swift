@@ -50,12 +50,17 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
 
   public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
+    case FCPChannelTypes.updateFavPoiTab:
+        let args = call.arguments as! [String : Any]
+        let favPoisArgs = (args["favPois"] as! [String : Any])
+        let newTemplate = FCPPointOfInterestTemplate(obj: args["favPois"] as! [String : Any])
+        FlutterCarPlaySceneDelegate.updateFavPoiTab(updatedPoi: newTemplate.get)
     case FCPChannelTypes.openMap:
         let args = call.arguments as? [String : Any]
         let latitude = args?["latitude"] as? Double
         let longitude = args?["longitude"] as? Double
         let address = args?["address"] as? String
-        FlutterCarPlaySceneDelegate().openMap(latitude: latitude!, longitude: longitude!, address: address!)
+        FlutterCarPlaySceneDelegate.shared.openMap(latitude: latitude!, longitude: longitude!, address: address!)
         result(true)
         break
     case FCPChannelTypes.updateFilterTab:
@@ -107,7 +112,6 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
           favPois = FCPPointOfInterestTemplate(obj: favPoisArgs)
           var favTemplate = favPois.get
           let poiTemplate = pois.get
-          let hasFav = favPois.get.pointsOfInterest.count > 0
           
           let rootTemplate = SwiftFlutterCarplayPlugin.rootTemplate
           let animated = SwiftFlutterCarplayPlugin.animated
@@ -115,7 +119,7 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
           
           rtTemplate.remove(at: 0)
           rtTemplate.insert(poiTemplate, at: 0)
-          if hasFav {rtTemplate.insert(favTemplate, at: 1)}
+          if isLoggedIn {rtTemplate.insert(favTemplate, at: 1)}
           else {
               let noFavTemplate = CPInformationTemplate(title: "Favori istasyonunuz bulunmamaktadir.", layout: .leading, items: [
               CPInformationItem(title: "Favori istasyonlarınıza erişim sağlanamadı. Lütfen giriş yaptığınızdan emin olunuz.", detail: nil)
@@ -124,7 +128,6 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
           }
           
           var chargingTab = rtTemplate.last as! CPListTemplate
-          debugPrint(isLoggedIn)
           
               
           var chargingLoginTemplate = CPInformationTemplate(title: "Giris Yap.", layout: .leading, items: [

@@ -159,13 +159,11 @@ class FlutterCarplay {
   void forceUpdateRootTemplate() => _carPlayController.methodChannel.invokeMethod('forceUpdateRootTemplate');
 
   Future updateFilterTab({required CPListTemplate updatedTemplate}) async {
-    print("trigger updateFilterTab");
     await _carPlayController.methodChannel.invokeMethod(
       'updateFilterTab',
       <String, dynamic>{'updatedTemplate': updatedTemplate.toJson()},
     ).then((value) {
       if (!value) return;
-      print("template added to history");
       _carPlayController.addTemplateToHistory(updatedTemplate);
     });
   }
@@ -195,6 +193,15 @@ class FlutterCarplay {
       'openMap',
       <String, dynamic>{'latitude': lat, 'longitude': long, 'address': address},
     );
+  }
+
+  void updateFavPoiTab({required CPPointOfInterestTemplate updatedTemplate}) {
+    _carPlayController.methodChannel.invokeMethod(
+      'updateFavPoiTab',
+      <String, dynamic>{'favPois': updatedTemplate.toJson()},
+    ).then((value) {
+      _carPlayController.addTemplateToHistory(updatedTemplate);
+    });
   }
 
   /// Getter for current root template.

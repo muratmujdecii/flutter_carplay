@@ -33,6 +33,7 @@ enum FCPChannelTypes {
   static let updateFilterTab = "updateFilterTab"
   static let updatePoiTab = "updatePoiTab"
   static let updateChargingTab = "updateChargingTab"
+  static let updateFavPoiTab = "updateFavPoiTab"
 }
 
 enum FCPAlertActionTypes {

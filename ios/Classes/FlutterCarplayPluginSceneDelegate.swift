@@ -10,8 +10,14 @@ import CarPlay
 @available(iOS 14.0, *)
 class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     static private var interfaceController: CPInterfaceController?
+    
     private var carplayScene: CPTemplateApplicationScene?
     
+    static let shared = FlutterCarPlaySceneDelegate()
+
+    private override init() {
+           super.init()
+       }
     
     static public func forceUpdateRootTemplate() {
         let rootTemplate = SwiftFlutterCarplayPlugin.rootTemplate
@@ -33,6 +39,15 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
         let tabbarTemplate = (SwiftFlutterCarplayPlugin.rootTemplate as! CPTabBarTemplate)
         let templates = tabbarTemplate.templates
         let pngData = UIImage(systemName: "ev.charger.fill")?.pngData()
+        let poiTab = templates.first(where: {$0.tabImage?.pngData() == pngData}) as! CPPointOfInterestTemplate
+        let selectedIndex = poiTab.selectedIndex
+        poiTab.setPointsOfInterest(updatedPoi.pointsOfInterest, selectedIndex: selectedIndex)
+    }
+    
+    static public func updateFavPoiTab(updatedPoi: CPPointOfInterestTemplate) {
+        let tabbarTemplate = (SwiftFlutterCarplayPlugin.rootTemplate as! CPTabBarTemplate)
+        let templates = tabbarTemplate.templates
+        let pngData = UIImage(systemName: "heart.fill")?.pngData()
         let poiTab = templates.first(where: {$0.tabImage?.pngData() == pngData}) as! CPPointOfInterestTemplate
         let selectedIndex = poiTab.selectedIndex
         poiTab.setPointsOfInterest(updatedPoi.pointsOfInterest, selectedIndex: selectedIndex)
@@ -81,11 +96,27 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
             onPresent(completed)
         })
     }
-    
     public func openMap(latitude: Double, longitude: Double, address: String) {
-        let url = URL(string: "maps://?q=\(address)&ll=\(longitude),\(latitude)")
-        carplayScene?.open(url!, options: nil, completionHandler: nil)
+        print("\(latitude) : \(longitude) : \(address) launched")
+        let appleMapsURL = URL(string: "http://maps.apple.com/?q=\(address)&ll=\(latitude),\(longitude)")!
+        let googleMapsURL = URL(string: "comgooglemaps://?daddr=\(latitude),\(longitude)&directionsmode=driving")!
+        
+        let canOpenGoogle = UIApplication.shared.canOpenURL(URL(string: "comgooglemaps://")!)
+        let canOpenAppleMaps = UIApplication.shared.canOpenURL(URL(string: "http://maps.apple.com/")!)
+
+        if canOpenGoogle {
+            FlutterCarPlaySceneDelegate.shared.carplayScene?.open(googleMapsURL, options: UIScene.OpenExternalURLOptions(), completionHandler: { (Void) in print("completed!") })
+        } else if canOpenAppleMaps {
+            FlutterCarPlaySceneDelegate.shared.carplayScene?.open(appleMapsURL, options: UIScene.OpenExternalURLOptions(), completionHandler: { (Void) in print("completed!") })
+        } else {
+            print("No map application can be opened.")
+        }
+        
+        print("Apple Maps URL: \(appleMapsURL)")
+        print("Google Maps URL: \(googleMapsURL)")
     }
+
+    
     
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                     didConnect interfaceController: CPInterfaceController) {
@@ -93,6 +124,7 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
         
         SwiftFlutterCarplayPlugin.onCarplayConnectionChange(status: FCPConnectionTypes.connected)
         let rootTemplate = SwiftFlutterCarplayPlugin.rootTemplate
+        FlutterCarPlaySceneDelegate.shared.carplayScene = templateApplicationScene
         
         if rootTemplate != nil {
           FlutterCarPlaySceneDelegate.interfaceController?.setRootTemplate(rootTemplate!, animated: SwiftFlutterCarplayPlugin.animated, completion: nil)
@@ -101,7 +133,7 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
     
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                   didDisconnect interfaceController: CPInterfaceController, from window: CPWindow) {
-        self.carplayScene = templateApplicationScene
+        FlutterCarPlaySceneDelegate.shared.carplayScene = templateApplicationScene
         SwiftFlutterCarplayPlugin.onCarplayConnectionChange(status: FCPConnectionTypes.disconnected)
         
         //FlutterCarPlaySceneDelegate.interfaceController = nil
@@ -109,7 +141,7 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
     
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                   didDisconnectInterfaceController interfaceController: CPInterfaceController) {
-        self.carplayScene = templateApplicationScene
+        FlutterCarPlaySceneDelegate.shared.carplayScene = templateApplicationScene
         SwiftFlutterCarplayPlugin.onCarplayConnectionChange(status: FCPConnectionTypes.disconnected)
         
         //FlutterCarPlaySceneDelegate.interfaceController = nil
