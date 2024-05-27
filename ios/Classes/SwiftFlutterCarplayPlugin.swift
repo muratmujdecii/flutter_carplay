@@ -55,6 +55,8 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
         let favPoisArgs = (args["favPois"] as! [String : Any])
         let newTemplate = FCPPointOfInterestTemplate(obj: args["favPois"] as! [String : Any])
         FlutterCarPlaySceneDelegate.updateFavPoiTab(updatedPoi: newTemplate.get)
+        result(true)
+        break
     case FCPChannelTypes.openMap:
         let args = call.arguments as? [String : Any]
         let latitude = args?["latitude"] as? Double
