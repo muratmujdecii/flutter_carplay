@@ -316,6 +316,10 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
       self.objcPresentTemplate = nil
       result(true)
       break
+    case FCPChannelTypes.connectionStatus:
+        let res = FlutterCarPlaySceneDelegate.getConnectionStatus()
+        result(res)
+        break
     default:
       result(false)
       break

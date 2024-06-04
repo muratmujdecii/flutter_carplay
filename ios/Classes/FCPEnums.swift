@@ -34,6 +34,7 @@ enum FCPChannelTypes {
   static let updatePoiTab = "updatePoiTab"
   static let updateChargingTab = "updateChargingTab"
   static let updateFavPoiTab = "updateFavPoiTab"
+  static let connectionStatus = "connectionStatus"
 }
 
 enum FCPAlertActionTypes {

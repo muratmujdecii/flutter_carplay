@@ -204,6 +204,15 @@ class FlutterCarplay {
     });
   }
 
+  Future<CPConnectionStatusTypes> getConnectionStatus() async {
+    final res = await _carPlayController.methodChannel.invokeMethod('connectionStatus');
+    CPConnectionStatusTypes connectionStatus = CPEnumUtils.enumFromString(
+      CPConnectionStatusTypes.values,
+      res,
+    );
+    return connectionStatus;
+  }
+
   /// Getter for current root template.
   /// Return one of type [CPTabBarTemplate], [CPGridTemplate], [CPListTemplate]
   static dynamic get rootTemplate {

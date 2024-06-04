@@ -12,7 +12,8 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
     static private var interfaceController: CPInterfaceController?
     
     private var carplayScene: CPTemplateApplicationScene?
-    
+    static private var carplayConnectionStatus: String = FCPConnectionTypes.disconnected
+
     static let shared = FlutterCarPlaySceneDelegate()
 
     private override init() {
@@ -61,11 +62,13 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
     
     // Fired when just before the carplay become active
     func sceneDidBecomeActive(_ scene: UIScene) {
+        FlutterCarPlaySceneDelegate.carplayConnectionStatus = FCPConnectionTypes.connected
         SwiftFlutterCarplayPlugin.onCarplayConnectionChange(status: FCPConnectionTypes.connected)
     }
     
     // Fired when carplay entered background
     func sceneDidEnterBackground(_ scene: UIScene) {
+        FlutterCarPlaySceneDelegate.carplayConnectionStatus = FCPConnectionTypes.background
         SwiftFlutterCarplayPlugin.onCarplayConnectionChange(status: FCPConnectionTypes.background)
     }
     
@@ -115,13 +118,19 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
         print("Apple Maps URL: \(appleMapsURL)")
         print("Google Maps URL: \(googleMapsURL)")
     }
+    
+    static public func getConnectionStatus() -> String {
+        return carplayConnectionStatus;
+    }
 
     
     
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                     didConnect interfaceController: CPInterfaceController) {
-        FlutterCarPlaySceneDelegate.interfaceController = interfaceController
+        print("FCPConnectionTypes.connected")
         
+        FlutterCarPlaySceneDelegate.interfaceController = interfaceController
+        FlutterCarPlaySceneDelegate.carplayConnectionStatus = FCPConnectionTypes.connected
         SwiftFlutterCarplayPlugin.onCarplayConnectionChange(status: FCPConnectionTypes.connected)
         let rootTemplate = SwiftFlutterCarplayPlugin.rootTemplate
         FlutterCarPlaySceneDelegate.shared.carplayScene = templateApplicationScene
@@ -133,6 +142,8 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
     
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                   didDisconnect interfaceController: CPInterfaceController, from window: CPWindow) {
+        print("FCPConnectionTypes.disconnected")
+        FlutterCarPlaySceneDelegate.carplayConnectionStatus = FCPConnectionTypes.disconnected
         FlutterCarPlaySceneDelegate.shared.carplayScene = templateApplicationScene
         SwiftFlutterCarplayPlugin.onCarplayConnectionChange(status: FCPConnectionTypes.disconnected)
         
@@ -141,7 +152,9 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
     
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                   didDisconnectInterfaceController interfaceController: CPInterfaceController) {
+        print("FCPConnectionTypes.disconnected 2")
         FlutterCarPlaySceneDelegate.shared.carplayScene = templateApplicationScene
+        FlutterCarPlaySceneDelegate.carplayConnectionStatus = FCPConnectionTypes.disconnected
         SwiftFlutterCarplayPlugin.onCarplayConnectionChange(status: FCPConnectionTypes.disconnected)
         
         //FlutterCarPlaySceneDelegate.interfaceController = nil
