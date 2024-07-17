@@ -18,6 +18,7 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
   private var objcPresentTemplate: FCPPresentTemplate?
   private static var _chargingList: CPListTemplate?
   private static var templateStack: [FCPRootTemplate] = []
+    public static var translations: [String: String] = [:]
 
   public static var rootTemplate: CPTemplate? {
     get {
@@ -48,7 +49,7 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
     self.streamHandler = FCPStreamHandlerPlugin(registrar: registrar)
   }
 
-  public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
     case FCPChannelTypes.updateFavPoiTab:
         let args = call.arguments as! [String : Any]
@@ -62,7 +63,14 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
         let latitude = args?["latitude"] as? Double
         let longitude = args?["longitude"] as? Double
         let address = args?["address"] as? String
-        FlutterCarPlaySceneDelegate.shared.openMap(latitude: latitude!, longitude: longitude!, address: address!)
+        let provider = args?["provider"] as? String
+        var mapProvider:MapProvider? = nil
+        
+        if(provider == "google") {mapProvider = .google}
+        else if(provider == "apple") {mapProvider = .apple}
+        else {mapProvider = .yandex}
+        
+        FlutterCarPlaySceneDelegate.shared.openMap(provider: mapProvider, latitude: latitude!, longitude: longitude!, address: address!)
         result(true)
         break
     case FCPChannelTypes.updateFilterTab:
@@ -102,12 +110,15 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
           return
         }
           SwiftFlutterCarplayPlugin.templateStack = []
+          SwiftFlutterCarplayPlugin.translations = args["translations"] as! [String : String]
           SwiftFlutterCarplayPlugin.rootTemplate = (rootTemplate as! FCPTabBarTemplate).get
           let args = call.arguments as! [String : Any]
           let poisArgs = (args["pois"] as! [String : Any])
           let favPoisArgs = (args["favPois"] as! [String : Any])
           let isLoggedIn = (args["isLoggedIn"] as! Bool)
-          
+          let isFavoriteTabUpdated = (args["isFavoriteTabUpdated"] as! Bool)
+          let translations = SwiftFlutterCarplayPlugin.translations
+
           var pois: FCPPointOfInterestTemplate
           var favPois: FCPPointOfInterestTemplate
           pois = FCPPointOfInterestTemplate(obj: poisArgs)
@@ -121,10 +132,16 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
           
           rtTemplate.remove(at: 0)
           rtTemplate.insert(poiTemplate, at: 0)
-          if isLoggedIn {rtTemplate.insert(favTemplate, at: 1)}
+          if(favTemplate.pointsOfInterest.isEmpty) {
+              let noFavTemplate = CPInformationTemplate(title: "", layout: .leading, items: [
+              CPInformationItem(title: translations["fav-nofav"], detail: nil)
+              ], actions: [])
+              rtTemplate.insert(noFavTemplate, at: 1)
+          }
+          else if isLoggedIn {rtTemplate.insert(favTemplate, at: 1)}
           else {
-              let noFavTemplate = CPInformationTemplate(title: "Favori istasyonunuz bulunmamaktadir.", layout: .leading, items: [
-              CPInformationItem(title: "Favori istasyonlarınıza erişim sağlanamadı. Lütfen giriş yaptığınızdan emin olunuz.", detail: nil)
+              let noFavTemplate = CPInformationTemplate(title: "", layout: .leading, items: [
+              CPInformationItem(title: translations["fav-logged-out"], detail: nil)
               ], actions: [])
               rtTemplate.insert(noFavTemplate, at: 1)
           }
@@ -132,8 +149,8 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
           var chargingTab = rtTemplate.last as! CPListTemplate
           
               
-          var chargingLoginTemplate = CPInformationTemplate(title: "Giris Yap.", layout: .leading, items: [
-            CPInformationItem(title: "Sarj islemlerini gormek icin giris yap", detail: nil)
+          var chargingLoginTemplate = CPInformationTemplate(title: "", layout: .leading, items: [
+            CPInformationItem(title: translations["charging-logged-out"], detail: nil)
             ], actions: []
           )
           if(!isLoggedIn){
@@ -150,14 +167,22 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
           
           var charging = tab.templates.last
           charging?.tabImage = UIImage(systemName: "bolt.car")
-          charging?.tabTitle = "Şarj İşlemleri"
-          tab.templates.first?.tabTitle = "İstasyonlar"
+          charging?.tabTitle = translations["charging"]
+          tab.templates.first?.tabTitle = translations["stations"]
           tab.templates.first?.tabImage = UIImage(systemName: "ev.charger.fill")
           let favTab = tab.templates[1]
-          favTab.tabTitle = "Favoriler"
+          let filtersTab = tab.templates[2]
+          filtersTab.tabTitle = translations["filters"]
+          favTab.tabTitle = translations["favorites"]
           favTab.tabImage = UIImage(systemName: "heart.fill")
+          
           SwiftFlutterCarplayPlugin.templateStack.append(pois)
           SwiftFlutterCarplayPlugin.templateStack.append(favPois)
+          if(isFavoriteTabUpdated) {
+              if #available(iOS 17.0, *) {
+                  tab.selectTemplate(at: 1)
+              }
+          }
           SwiftFlutterCarplayPlugin.rootTemplate = tab
         break
       case String(describing: FCPGridTemplate.self):

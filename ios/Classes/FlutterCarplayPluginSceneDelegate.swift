@@ -50,6 +50,7 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
         let templates = tabbarTemplate.templates
         let pngData = UIImage(systemName: "heart.fill")?.pngData()
         let poiTab = templates.first(where: {$0.tabImage?.pngData() == pngData}) as! CPPointOfInterestTemplate
+        
         let selectedIndex = poiTab.selectedIndex
         poiTab.setPointsOfInterest(updatedPoi.pointsOfInterest, selectedIndex: selectedIndex)
     }
@@ -99,25 +100,36 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
             onPresent(completed)
         })
     }
-    public func openMap(latitude: Double, longitude: Double, address: String) {
-        print("\(latitude) : \(longitude) : \(address) launched")
-        let appleMapsURL = URL(string: "http://maps.apple.com/?q=\(address)&ll=\(latitude),\(longitude)")!
-        let googleMapsURL = URL(string: "comgooglemaps://?daddr=\(latitude),\(longitude)&directionsmode=driving")!
-        
-        let canOpenGoogle = UIApplication.shared.canOpenURL(URL(string: "comgooglemaps://")!)
-        let canOpenAppleMaps = UIApplication.shared.canOpenURL(URL(string: "http://maps.apple.com/")!)
+    public func openMap(provider: MapProvider?, latitude: Double, longitude: Double, address: String) {
+          let appleMapsURL = URL(string: "http://maps.apple.com/?q=\(address)&ll=\(latitude),\(longitude)")!
+          let googleMapsURL = URL(string: "comgooglemaps://?daddr=\(latitude),\(longitude)&directionsmode=driving")!
+          let yandexMapsURL = URL(string: "yandexmaps://maps.yandex.com/?rtext=\(latitude),\(longitude)")!
+          
+          let urlsByProvider: [(provider: MapProvider, url: URL)] = [
+              (.google, googleMapsURL),
+              (.apple, appleMapsURL),
+              (.yandex, yandexMapsURL)
+          ]
 
-        if canOpenGoogle {
-            FlutterCarPlaySceneDelegate.shared.carplayScene?.open(googleMapsURL, options: UIScene.OpenExternalURLOptions(), completionHandler: { (Void) in print("completed!") })
-        } else if canOpenAppleMaps {
-            FlutterCarPlaySceneDelegate.shared.carplayScene?.open(appleMapsURL, options: UIScene.OpenExternalURLOptions(), completionHandler: { (Void) in print("completed!") })
-        } else {
-            print("No map application can be opened.")
-        }
-        
-        print("Apple Maps URL: \(appleMapsURL)")
-        print("Google Maps URL: \(googleMapsURL)")
+          let availableProviders: [MapProvider: Bool] = [
+              .google: UIApplication.shared.canOpenURL(URL(string: "comgooglemaps://")!),
+              .apple: UIApplication.shared.canOpenURL(URL(string: "http://maps.apple.com/")!),
+              .yandex: UIApplication.shared.canOpenURL(URL(string: "yandexmaps://")!)
+          ]
+
+        if let preferredURL = urlsByProvider.first(where: { $0.provider == provider && availableProviders[$0.provider] == true })?.url {
+              openMaps(url: preferredURL)
+          } else if let fallbackURL = urlsByProvider.first(where: { availableProviders[$0.provider] == true })?.url {
+              openMaps(url: fallbackURL)
+          } else {
+              print("No available map applications.")
+          }
     }
+    
+    private func openMaps(url:URL) {
+        FlutterCarPlaySceneDelegate.shared.carplayScene?.open(url, options: UIScene.OpenExternalURLOptions(), completionHandler: { (Void) in print("completed!") })
+    }
+    
     
     static public func getConnectionStatus() -> String {
         return carplayConnectionStatus;
@@ -159,4 +171,12 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
         
         //FlutterCarPlaySceneDelegate.interfaceController = nil
     }
+}
+
+
+enum MapProvider {
+    case google
+    case apple
+    case yandex
+    
 }

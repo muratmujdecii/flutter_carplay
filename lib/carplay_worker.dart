@@ -131,6 +131,8 @@ class FlutterCarplay {
     required CPPointOfInterestTemplate pois,
     required CPPointOfInterestTemplate favPois,
     bool isLoggedIn = false,
+    bool isFavoriteTabUpdated = false,
+    Map<String, dynamic> translations = const {},
   }) {
     if (rootTemplate.runtimeType == CPTabBarTemplate ||
         rootTemplate.runtimeType == CPGridTemplate ||
@@ -144,6 +146,8 @@ class FlutterCarplay {
         'pois': pois.toJson(),
         'favPois': favPois.toJson(),
         'isLoggedIn': isLoggedIn,
+        'isFavoriteTabUpdated': isFavoriteTabUpdated,
+        'translations': translations,
       }).then((value) {
         if (value) {
           FlutterCarPlayController.currentRootTemplate = rootTemplate;
@@ -188,10 +192,11 @@ class FlutterCarplay {
     });
   }
 
-  void openMaps({required double lat, required double long, required String address}) {
+  void openMaps(
+      {required MapProvider mapProvider, required double lat, required double long, required String address}) {
     _carPlayController.methodChannel.invokeMethod(
       'openMap',
-      <String, dynamic>{'latitude': lat, 'longitude': long, 'address': address},
+      <String, dynamic>{'provider': mapProvider?.name, 'latitude': lat, 'longitude': long, 'address': address},
     );
   }
 
