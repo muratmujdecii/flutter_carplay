@@ -101,33 +101,50 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
         })
     }
     public func openMap(provider: MapProvider?, latitude: Double, longitude: Double, address: String) {
-          let appleMapsURL = URL(string: "http://maps.apple.com/?q=\(address)&ll=\(latitude),\(longitude)")!
-          let googleMapsURL = URL(string: "comgooglemaps://?daddr=\(latitude),\(longitude)&directionsmode=driving")!
-          let yandexMapsURL = URL(string: "yandexmaps://maps.yandex.com/?rtext=\(latitude),\(longitude)")!
-          
-          let urlsByProvider: [(provider: MapProvider, url: URL)] = [
-              (.google, googleMapsURL),
-              (.apple, appleMapsURL),
-              (.yandex, yandexMapsURL)
-          ]
+        guard let encodedAddress = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            print("Failed to encode address")
+            return
+        }
+        
+        let latString = String(latitude)
+        let lonString = String(longitude)
+        guard let encodedLat = latString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let encodedLon = lonString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            print("Failed to encode coordinates")
+            return
+        }
+        
+        let appleMapsURL = URL(string: "http://maps.apple.com/?q=\(encodedAddress)&ll=\(encodedLat),\(encodedLon)")
+        let googleMapsURL = URL(string: "comgooglemaps://?daddr=\(encodedLat),\(encodedLon)&directionsmode=driving")
+        let yandexMapsURL = URL(string: "yandexmaps://maps.yandex.com/?rtext=\(encodedLat),\(encodedLon)")
+        
+        let urlsByProvider: [(provider: MapProvider, url: URL?)] = [
+            (.google, googleMapsURL),
+            (.apple, appleMapsURL),
+            (.yandex, yandexMapsURL)
+        ]
 
-          let availableProviders: [MapProvider: Bool] = [
-              .google: UIApplication.shared.canOpenURL(URL(string: "comgooglemaps://")!),
-              .apple: UIApplication.shared.canOpenURL(URL(string: "http://maps.apple.com/")!),
-              .yandex: UIApplication.shared.canOpenURL(URL(string: "yandexmaps://")!)
-          ]
+        let availableProviders: [MapProvider: Bool] = [
+            .google: UIApplication.shared.canOpenURL(URL(string: "comgooglemaps://")!),
+            .apple: true, // Apple Maps is always available
+            .yandex: UIApplication.shared.canOpenURL(URL(string: "yandexmaps://")!)
+        ]
 
         if let preferredURL = urlsByProvider.first(where: { $0.provider == provider && availableProviders[$0.provider] == true })?.url {
-              openMaps(url: preferredURL)
-          } else if let fallbackURL = urlsByProvider.first(where: { availableProviders[$0.provider] == true })?.url {
-              openMaps(url: fallbackURL)
-          } else {
-              print("No available map applications.")
-          }
+            openMaps(url: preferredURL)
+        } else if let fallbackURL = urlsByProvider.first(where: { availableProviders[$0.provider] == true })?.url {
+            openMaps(url: fallbackURL)
+        } else {
+            print("No available map applications.")
+        }
     }
     
-    private func openMaps(url:URL) {
-        FlutterCarPlaySceneDelegate.shared.carplayScene?.open(url, options: UIScene.OpenExternalURLOptions(), completionHandler: { (Void) in print("completed!") })
+    private func openMaps(url: URL) {
+        carplayScene?.open(url, options: UIScene.OpenExternalURLOptions()) { success in
+            if !success {
+                print("Failed to open maps URL: \(url)")
+            }
+        }
     }
     
     
@@ -142,15 +159,32 @@ class FlutterCarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelega
         print("FCPConnectionTypes.connected")
         
         FlutterCarPlaySceneDelegate.interfaceController = interfaceController
-        FlutterCarPlaySceneDelegate.carplayConnectionStatus = FCPConnectionTypes.connected
-        SwiftFlutterCarplayPlugin.onCarplayConnectionChange(status: FCPConnectionTypes.connected)
-        let rootTemplate = SwiftFlutterCarplayPlugin.rootTemplate
         FlutterCarPlaySceneDelegate.shared.carplayScene = templateApplicationScene
         
-        if rootTemplate != nil {
-          FlutterCarPlaySceneDelegate.interfaceController?.setRootTemplate(rootTemplate!, animated: SwiftFlutterCarplayPlugin.animated, completion: nil)
+        // Set connection status
+        FlutterCarPlaySceneDelegate.carplayConnectionStatus = FCPConnectionTypes.connected
+        
+        // Add a slight delay to ensure proper initialization
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            // Notify connection change
+            SwiftFlutterCarplayPlugin.onCarplayConnectionChange(status: FCPConnectionTypes.connected)
+            
+            // Set root template if available
+            if let rootTemplate = SwiftFlutterCarplayPlugin.rootTemplate {
+                FlutterCarPlaySceneDelegate.interfaceController?.setRootTemplate(
+                    rootTemplate,
+                    animated: SwiftFlutterCarplayPlugin.animated,
+                    completion: { success, error in
+                        if let error = error {
+                            print("Failed to set root template: \(error)")
+                        }
+                    }
+                )
+            } else {
+                print("No root template available")
+            }
         }
-      }
+    }
     
     func templateApplicationScene(_ templateApplicationScene: CPTemplateApplicationScene,
                                   didDisconnect interfaceController: CPInterfaceController, from window: CPWindow) {

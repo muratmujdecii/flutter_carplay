@@ -30,6 +30,7 @@ class FCPPointOfInterestTemplate {
         }
         
         let pointOfInterestTemplate = CPPointOfInterestTemplate.init(title: self.title,pointsOfInterest: pois, selectedIndex: NSNotFound)
+        
         self._super = pointOfInterestTemplate
         return pointOfInterestTemplate
     }

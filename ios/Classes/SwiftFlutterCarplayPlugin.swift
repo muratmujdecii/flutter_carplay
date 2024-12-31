@@ -42,10 +42,10 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
       
     let channel = FlutterMethodChannel(name: makeFCPChannelId(event: ""),
                                        binaryMessenger: registrar.messenger())
-    let instance = SwiftFlutterCarplayPlugin()
+    let instance: SwiftFlutterCarplayPlugin = SwiftFlutterCarplayPlugin()
     registrar.addMethodCallDelegate(instance, channel: channel)
     self.registrar = registrar
-    
+      
     self.streamHandler = FCPStreamHandlerPlugin(registrar: registrar)
   }
 
@@ -124,7 +124,15 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
           pois = FCPPointOfInterestTemplate(obj: poisArgs)
           favPois = FCPPointOfInterestTemplate(obj: favPoisArgs)
           var favTemplate = favPois.get
-          let poiTemplate = pois.get
+          var poiTemplate = pois.get
+          
+          for index in 0..<poiTemplate.pointsOfInterest.count {
+              poiTemplate.pointsOfInterest[index].pinImage = poiTemplate.pointsOfInterest[index].pinImage?.resizeImageTo(size: CGSize(width: 64, height: 64))
+          }
+          
+          for index in 0..<favTemplate.pointsOfInterest.count {
+              favTemplate.pointsOfInterest[index].pinImage = favTemplate.pointsOfInterest[index].pinImage?.resizeImageTo(size: CGSize(width: 64, height: 64))
+          }
           
           let rootTemplate = SwiftFlutterCarplayPlugin.rootTemplate
           let animated = SwiftFlutterCarplayPlugin.animated
@@ -132,22 +140,21 @@ public class SwiftFlutterCarplayPlugin: NSObject, FlutterPlugin {
           
           rtTemplate.remove(at: 0)
           rtTemplate.insert(poiTemplate, at: 0)
-          if(favTemplate.pointsOfInterest.isEmpty) {
-              let noFavTemplate = CPInformationTemplate(title: "", layout: .leading, items: [
-              CPInformationItem(title: translations["fav-nofav"], detail: nil)
-              ], actions: [])
-              rtTemplate.insert(noFavTemplate, at: 1)
-          }
-          else if isLoggedIn {rtTemplate.insert(favTemplate, at: 1)}
-          else {
+          if !isLoggedIn {
               let noFavTemplate = CPInformationTemplate(title: "", layout: .leading, items: [
               CPInformationItem(title: translations["fav-logged-out"], detail: nil)
               ], actions: [])
               rtTemplate.insert(noFavTemplate, at: 1)
           }
+          else if(favTemplate.pointsOfInterest.isEmpty) {
+              let noFavTemplate = CPInformationTemplate(title: "", layout: .leading, items: [
+              CPInformationItem(title: translations["fav-nofav"], detail: nil)
+              ], actions: [])
+              rtTemplate.insert(noFavTemplate, at: 1)
+          }
+          else {rtTemplate.insert(favTemplate, at: 1)}
           
           var chargingTab = rtTemplate.last as! CPListTemplate
-          
               
           var chargingLoginTemplate = CPInformationTemplate(title: "", layout: .leading, items: [
             CPInformationItem(title: translations["charging-logged-out"], detail: nil)
